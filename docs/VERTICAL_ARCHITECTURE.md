@@ -190,8 +190,19 @@ hardcodes `view_size = (1280., 720.)`. Any test that asserts on absolute X/Y coo
 or columns implicitly assumes horizontal scroll. These will need updating or parameterizing when
 the `Vertical` impl is introduced.
 
-UNSURE: The `src/layout/tests/` directory was not accessible via the Read tool. The full extent of
-coordinate assertions in those tests is unknown.
+**Test scope resolved**: `src/layout/tests.rs` is a single ~2100-line file (not a directory) that
+declares two sub-modules:
+
+- `tests/animations.rs`: uses `insta::assert_snapshot!` with absolute `x`, `y`, `w`, `h`
+  coordinates printed by `format_tiles`. A handful of snapshots. These will need regenerating if
+  Horizontal geometry accidentally changes in Phase 2, and will need new Vertical snapshots in
+  Phase 5. `insta` will catch any unintentional drift before it ships.
+- `tests/fullscreen.rs`: uses `check_ops` for structural invariant checks only — no absolute
+  coordinate assertions.
+
+The main proptest tests in `tests.rs` check structural invariants (no panics, column/tile
+consistency) against random `Op` sequences. They do **not** assert absolute coordinates.
+**Phase 3 is not significantly longer than the doc suggests.**
 
 ---
 
@@ -390,6 +401,12 @@ ignores tests.
 
 **Expected scope**: `ScrollingSpace::new`, `Column::new`, and any test fixture construction.
 `FloatingSpace`, `Tile`, `Monitor`, `Workspace`, `Layout` — none of these need changes yet.
+
+**Critical — axis propagation**: When `Column::new` is updated to accept `axis: ScrollAxis`,
+every call site must pass `self.axis` from the enclosing `ScrollingSpace`. Do **not** use
+`Default::default()` or the literal `ScrollAxis::Horizontal` at any `Column` construction site
+inside `ScrollingSpace`. A `ScrollingSpace` with `axis: Vertical` that silently constructs
+`Column` with `axis: Horizontal` would produce wrong geometry at runtime with no compile error.
 
 ---
 

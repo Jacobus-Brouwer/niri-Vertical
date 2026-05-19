@@ -10,6 +10,7 @@ use ordered_float::NotNan;
 use smithay::backend::renderer::gles::GlesRenderer;
 use smithay::utils::{Logical, Point, Rectangle, Scale, Serial, Size};
 
+use super::axis::ScrollAxis;
 use super::closing_window::{ClosingWindow, ClosingWindowRenderElement};
 use super::monitor::InsertPosition;
 use super::tab_indicator::{TabIndicator, TabIndicatorRenderElement, TabInfo};
@@ -92,6 +93,9 @@ pub struct ScrollingSpace<W: LayoutElement> {
 
     /// Configurable properties of the layout.
     options: Rc<Options>,
+
+    /// Scroll axis for this space (Horizontal = current niri behaviour; Vertical = Phase 5+).
+    pub(super) axis: ScrollAxis,
 }
 
 niri_render_elements! {
@@ -214,6 +218,9 @@ pub struct Column<W: LayoutElement> {
 
     /// Configurable properties of the layout.
     options: Rc<Options>,
+
+    /// Scroll axis inherited from the enclosing ScrollingSpace.
+    axis: ScrollAxis,
 }
 
 /// Extra per-tile data.
@@ -307,6 +314,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
             scale,
             clock,
             options,
+            axis: ScrollAxis::Horizontal,
         }
     }
 
@@ -882,6 +890,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
             self.scale,
             width,
             is_full_width,
+            self.axis,
         );
 
         self.add_column(col_idx, column, activate, anim_config);
@@ -3934,6 +3943,7 @@ impl<W: LayoutElement> Column<W> {
         scale: f64,
         width: ColumnWidth,
         is_full_width: bool,
+        axis: ScrollAxis,
     ) -> Self {
         let options = tile.options.clone();
 
@@ -3977,6 +3987,7 @@ impl<W: LayoutElement> Column<W> {
             scale,
             clock: tile.clock.clone(),
             options,
+            axis,
         };
 
         let pending_sizing_mode = tile.window().pending_sizing_mode();
